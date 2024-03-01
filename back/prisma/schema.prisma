@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum RentalStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Customer {
+  id               Int           @id @default(autoincrement())
+  username         String        @db.VarChar(30) @unique
+  firstName        String        @map("first_name")
+  lastName         String        @map("last_name")
+  phoneNumber      String?       @map("phone_number")
+  email            String        @unique
+  password         String
+  address          String
+  rentals          Rental[]
+  rentalDetails    RentalDetails[]
+  orders           OrderRent[]  
+  todos            Todo[]        // Added relation with Todo
+}
+
+model Rental {
+  id            Int            @id @default(autoincrement())
+  total_price   Int            @default(0)
+  email         String?
+  address       String
+  first_date    DateTime
+  end_date      DateTime
+  status        RentalStatus   @default(PENDING)
+  customer      Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  customerId    Int            @map("customer_id")
+
+  rentalDetails RentalDetails[] @relation("RentalToRentalDetails")
+}
+
+
+
+model RentalDetails {
+  id            Int          @id @default(autoincrement())
+  total         Int          @default(0)
+  motorcycles   Motorcycle[] @relation("MotorcycleToRentalDetails")
+  orders        OrderRent[]  @relation("OrderRentToRentalDetails")
+  rental        Rental       @relation("RentalToRentalDetails", fields: [rentalId], references: [id])
+  rentalId      Int          @map("rental_id")
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  customerId    Int          @map("customer_id")
+}
+
+
+
+model Motorcycle {
+  id             Int          @id @default(autoincrement())
+  model          String
+  rental_rate    Float         // Adjusted to appropriate type
+  brand_motor    BrandMotor   @relation(fields: [brandMotorId], references: [id], onDelete: Cascade)
+  brandMotorId   Int          @map("brand_motor_id")
+  type           MotorType    @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  typeId         Int          @map("motorcycle_type_id")
+  name           String
+  rentalDetails  RentalDetails[] @relation("MotorcycleToRentalDetails")
+}
+
+
+model MotorType {
+  id           Int          @id @default(autoincrement())
+  sport        String
+  touring      String
+  off_road     String
+  scooter      String
+  motorcycles  Motorcycle[] 
+}
+
+model BrandMotor {
+  id            Int          @id @default(autoincrement())
+  brand_name    String
+  brand_type    String
+  motorcycles  Motorcycle[]  
+}
+
+model OrderRent {
+  id                Int            @id @default(autoincrement())
+  order_date        DateTime       @default(now()) @map("order_date")
+  total             Int            @default(0)
+  customer          Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId        Int            @map("customer_id")
+  rentalDetails     RentalDetails[] @relation("OrderRentToRentalDetails")
+  payments          Payment[]
+}
+
+
+model Payment {
+  id                Int            @id @default(autoincrement())
+  payment_date      DateTime       @default(now()) @map("payment_date")
+  payment_method    String         @map("payment_method")
+  amount_paid       Float          @map("amount_paid")
+  orderRent         OrderRent      @relation(fields: [orderRentId], references: [id], onDelete: Cascade)
+  orderRentId       Int            @map("order_rent_id")
+}
+
+
+model Todo {
+  id          Int           @id @default(autoincrement())
+  title       String        @db.VarChar(150)
+  status      RentalStatus  @default(PENDING)
+  dueDate     DateTime      @db.Timestamp(0) @map("due_date")
+  customer    Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId  Int           @map("customer_id")
+  createdAt   DateTime      @default(now()) @db.Timestamp(0) @map("created_at")
+  updatedAt   DateTime      @updatedAt @db.Timestamp(0) @map("updated_at")
+
+  @@map("todos")
+}
+
+
